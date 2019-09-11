@@ -7,7 +7,7 @@ import json
 from flask import current_app
 
 from flask_rest_jsonapi.exceptions import BadRequest, InvalidFilters, InvalidSort, InvalidField, InvalidInclude
-from flask_rest_jsonapi.schema import get_model_field, get_relationships, get_schema_from_type
+from flask_rest_jsonapi.schema import get_model_field, get_related_schema, get_relationships, get_schema_from_type
 
 
 class QueryStringManager(object):
@@ -173,13 +173,25 @@ class QueryStringManager(object):
             sorting_results = []
             for sort_field in self.qs['sort'].split(','):
                 field = sort_field.replace('-', '')
-                if field not in self.schema._declared_fields:
-                    raise InvalidSort("{} has no attribute {}".format(self.schema.__name__, field))
-                if field in get_relationships(self.schema):
-                    raise InvalidSort("You can't sort on {} because it is a relationship field".format(field))
-                field = get_model_field(self.schema, field)
                 order = 'desc' if sort_field.startswith('-') else 'asc'
-                sorting_results.append({'field': field, 'order': order})
+                if '.' in field:
+                    # attempting to sort on relationship
+                    relationship, field = field.split('.')
+                    if not relationship in get_relationships(self.schema):
+                        raise InvalidSort("{} has no attribute {}".format(self.schema.__name__, relationship))
+
+                    relationship_schema = get_related_schema(self.schema, relationship)
+                    if field not in get_model_field(relationship_schema, field):
+                        raise InvalidSort("Relationship {} has no attribute {}".format(relationship, field))
+
+                    sorting_results.append({'field': field, 'order': order, 'relationship': relationship})
+                elif field not in self.schema._declared_fields:
+                    raise InvalidSort("{} has no attribute {}".format(self.schema.__name__, field))
+                elif field in get_relationships(self.schema):
+                    raise InvalidSort("You can't sort on {} because it is a relationship field".format(field))
+                else:
+                    field = get_model_field(self.schema, field)
+                    sorting_results.append({'field': field, 'order': order})
             return sorting_results
 
         return []

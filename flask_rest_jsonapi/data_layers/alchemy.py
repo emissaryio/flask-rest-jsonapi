@@ -511,9 +511,16 @@ class SqlalchemyDataLayer(BaseDataLayer):
         """
         for sort_opt in sort_info:
             field = sort_opt['field']
-            if not hasattr(self.model, field):
+            if sort_opt.get('relationship'):
+                relationship_schema = get_related_schema(self.resource.schema, sort_opt['relationship'])
+                if not hasattr(relationship_schema.Meta, 'model'):
+                    raise InvalidSort("In order to sort on a relationship, meta model must be defined")
+                relationship_model = relationship_schema.Meta.model
+                query = query.join(relationship_model).order_by(getattr(getattr(relationship_model, sort_opt['field']), sort_opt['order'])())
+            elif not hasattr(self.model, field):
                 raise InvalidSort("{} has no attribute {}".format(self.model.__name__, field))
-            query = query.order_by(getattr(getattr(self.model, field), sort_opt['order'])())
+            else:
+                query = query.order_by(getattr(getattr(self.model, field), sort_opt['order'])())
         return query
 
     def paginate_query(self, query, paginate_info):
