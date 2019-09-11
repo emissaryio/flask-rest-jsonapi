@@ -137,6 +137,9 @@ def get_related_schema(schema, field):
     :param field: the relationship field
     :return Schema: the related schema
     """
+    if isinstance(schema._declared_fields[field].__dict__['_Relationship__schema'], basestring):
+        schema._declared_fields[field].schema
+
     return schema._declared_fields[field].__dict__['_Relationship__schema']
 
 
