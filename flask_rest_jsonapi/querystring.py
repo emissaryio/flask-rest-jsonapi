@@ -7,7 +7,7 @@ import json
 from flask import current_app
 
 from flask_rest_jsonapi.exceptions import BadRequest, InvalidFilters, InvalidSort, InvalidField, InvalidInclude
-from flask_rest_jsonapi.schema import get_model_field, get_related_schema, get_relationships, get_schema_from_type
+from flask_rest_jsonapi.schema import get_model_field, get_related_schema, get_relationships, get_schema_from_type, get_related_schema_path
 
 
 class QueryStringManager(object):
@@ -176,15 +176,14 @@ class QueryStringManager(object):
                 order = 'desc' if sort_field.startswith('-') else 'asc'
                 if '.' in field:
                     # attempting to sort on relationship
-                    relationship, field = field.split('.')
-                    if not relationship in get_relationships(self.schema):
-                        raise InvalidSort("{} has no relationship {}".format(self.schema.__name__, relationship))
+                    relationship_path = '.'.join(field.split('.')[0:-1])
+                    target_attribute = field.split('.')[-1]
 
-                    relationship_schema = get_related_schema(self.schema, relationship)
-                    if not get_model_field(relationship_schema, field):
-                        raise InvalidSort("Relationship {} has no attribute {}".format(relationship, field))
+                    relationship_schema = get_related_schema_path(self.schema, relationship_path)
+                    if not get_model_field(relationship_schema, target_attribute):
+                        raise InvalidSort("Invalid sort path {}".format(field))
 
-                    sorting_results.append({'field': field, 'order': order, 'relationship': relationship})
+                    sorting_results.append({'field': target_attribute, 'order': order, 'relationship': relationship_path})
                 elif field not in self.schema._declared_fields:
                     raise InvalidSort("{} has no attribute {}".format(self.schema.__name__, field))
                 elif field in get_relationships(self.schema):

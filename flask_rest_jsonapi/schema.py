@@ -5,6 +5,7 @@
 from marshmallow import class_registry
 from marshmallow.base import SchemaABC
 from marshmallow_jsonapi.fields import Relationship, List, Nested
+from marshmallow.base import SchemaABC
 
 from flask_rest_jsonapi.exceptions import InvalidInclude
 
@@ -133,7 +134,7 @@ def get_relationships(schema, model_field=False):
 def get_related_schema(schema, field):
     """Retrieve the related schema of a relationship field
 
-    :param Schema schema: the schema to retrieve le relationship field from
+    :param Schema schema: the schema to retrieve the relationship field from
     :param field: the relationship field
     :return Schema: the related schema
     """
@@ -142,6 +143,31 @@ def get_related_schema(schema, field):
 
     return schema._declared_fields[field].__dict__['_Relationship__schema']
 
+
+def get_related_schema_path(schema, path):
+    """Retrieve a related schema at depth, with the path seperated by '.'
+
+    :params Schema schema: the base schema to begin iterating from
+    :params path: the period seperated path to find the final target schema
+    :return Schema: the target related schema
+    """
+    current_schema = schema
+    for obj in path.split('.'):
+        try:
+            field = get_model_field(current_schema, obj)
+        except Exception as e:
+            raise Exception("Invalid path provided: {}".format(path))
+
+        related_schema_cls = get_related_schema(current_schema, obj)
+
+        if isinstance(related_schema_cls, SchemaABC):
+            related_schema_cls = related_schema_cls.__class__
+        else:
+            related_schema_cls = class_registry.get_class(related_schema_cls)
+
+        current_schema = related_schema_cls
+
+    return current_schema
 
 def get_schema_from_type(resource_type):
     """Retrieve a schema from the registry by his type

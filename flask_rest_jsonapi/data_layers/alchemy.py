@@ -15,7 +15,7 @@ from flask_rest_jsonapi.data_layers.base import BaseDataLayer
 from flask_rest_jsonapi.exceptions import RelationNotFound, RelatedObjectNotFound, JsonApiException,\
     InvalidSort, ObjectNotFound, InvalidInclude, InvalidType
 from flask_rest_jsonapi.data_layers.filtering.alchemy import create_filters
-from flask_rest_jsonapi.schema import get_model_field, get_related_schema, get_relationships, get_nested_fields, get_schema_field
+from flask_rest_jsonapi.schema import get_model_field, get_related_schema, get_relationships, get_nested_fields, get_schema_field, get_related_schema_path
 
 
 class SqlalchemyDataLayer(BaseDataLayer):
@@ -113,13 +113,13 @@ class SqlalchemyDataLayer(BaseDataLayer):
         if qs.filters:
             query = self.filter_query(query, qs.filters, self.model)
 
+        if getattr(self, 'eagerload_includes', True):
+            query = self.eagerload_includes(query, qs)
+
         if qs.sorting:
             query = self.sort_query(query, qs.sorting)
 
         object_count = query.count()
-
-        if getattr(self, 'eagerload_includes', True):
-            query = self.eagerload_includes(query, qs)
 
         query = self.paginate_query(query, qs.pagination)
 
@@ -512,12 +512,20 @@ class SqlalchemyDataLayer(BaseDataLayer):
         for sort_opt in sort_info:
             field = sort_opt['field']
             if sort_opt.get('relationship'):
-                relationship_schema = get_related_schema(self.resource.schema, sort_opt['relationship'])
-                if not hasattr(relationship_schema.Meta, 'model'):
-                    raise InvalidSort("In order to sort on a relationship, meta model must be defined")
-                relationship_model = relationship_schema.Meta.model
-                model_field = get_model_field(relationship_schema, sort_opt['field'])
-                query = query.join(relationship_model).order_by(getattr(getattr(relationship_model, model_field), sort_opt['order'])())
+                current_schema = self.resource.schema
+                for obj in sort_opt['relationship'].split('.'):
+                    current_schema = get_related_schema(current_schema, obj)
+
+                    if not hasattr(current_schema.Meta, 'model'):
+                        raise InvalidSort("In order to sort on a relationship, meta model must be defined")
+
+                    relationship_model = current_schema.Meta.model
+                    query = query.join(relationship_model)
+
+
+                relationship_model = current_schema.Meta.model
+                model_field = get_model_field(current_schema, sort_opt['field'])
+                query = query.order_by(getattr(getattr(relationship_model, model_field), sort_opt['order'])())
             elif not hasattr(self.model, field):
                 raise InvalidSort("{} has no attribute {}".format(self.model.__name__, field))
             else:
