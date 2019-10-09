@@ -516,7 +516,8 @@ class SqlalchemyDataLayer(BaseDataLayer):
                 if not hasattr(relationship_schema.Meta, 'model'):
                     raise InvalidSort("In order to sort on a relationship, meta model must be defined")
                 relationship_model = relationship_schema.Meta.model
-                query = query.join(relationship_model).order_by(getattr(getattr(relationship_model, sort_opt['field']), sort_opt['order'])())
+                model_field = get_model_field(relationship_schema, sort_opt['field'])
+                query = query.join(relationship_model).order_by(getattr(getattr(relationship_model, model_field), sort_opt['order'])())
             elif not hasattr(self.model, field):
                 raise InvalidSort("{} has no attribute {}".format(self.model.__name__, field))
             else:

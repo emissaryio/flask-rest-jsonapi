@@ -178,10 +178,10 @@ class QueryStringManager(object):
                     # attempting to sort on relationship
                     relationship, field = field.split('.')
                     if not relationship in get_relationships(self.schema):
-                        raise InvalidSort("{} has no attribute {}".format(self.schema.__name__, relationship))
+                        raise InvalidSort("{} has no relationship {}".format(self.schema.__name__, relationship))
 
                     relationship_schema = get_related_schema(self.schema, relationship)
-                    if field not in get_model_field(relationship_schema, field):
+                    if not get_model_field(relationship_schema, field):
                         raise InvalidSort("Relationship {} has no attribute {}".format(relationship, field))
 
                     sorting_results.append({'field': field, 'order': order, 'relationship': relationship})
