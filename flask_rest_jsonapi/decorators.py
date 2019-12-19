@@ -72,6 +72,10 @@ def jsonapi_exception_formatter(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         headers = {'Content-Type': 'application/vnd.api+json'}
+
+        if current_app.config['DEBUG'] is True:
+            return func(*args, **kwargs)
+
         try:
             return func(*args, **kwargs)
         except JsonApiException as e:
@@ -79,9 +83,6 @@ def jsonapi_exception_formatter(func):
                                  e.status,
                                  headers)
         except Exception as e:
-            if current_app.config['DEBUG'] is True:
-                raise e
-
             if 'sentry' in current_app.extensions:
                 current_app.extensions['sentry'].captureException()
 
