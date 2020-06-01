@@ -143,6 +143,30 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         return final_result
 
     @check_method_requirements
+    def patch(self, *args, **kwargs):
+
+        qs = QSManager(request.args, self.schema)
+
+        schema_kwargs = getattr(self, 'patch_schema_kwargs', dict())
+        schema_kwargs.update({'many': True})
+
+        schema = compute_schema(self.schema,
+                                schema_kwargs,
+                                qs,
+                                qs.include)
+
+        json_data = request.get_json() or {}
+
+        self.before_patch(args, kwargs, data=json_data)
+
+        result_objs = self.update_list(json_data['data'], qs, kwargs)
+        result = schema.dump(result_objs).data
+
+        self.after_patch(result)
+
+        return (result, 200)
+
+    @check_method_requirements
     def post(self, *args, **kwargs):
         """Create an object"""
         json_data = request.get_json() or {}
@@ -206,6 +230,14 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         """Hook to make custom work after post method"""
         return result
 
+    def before_patch(self, args, kwargs, data=None):
+        """Hook to make custom work before patch method"""
+        pass
+
+    def after_patch(self, result):
+        """Hook to make custom work after patch method"""
+        pass
+
     def before_marshmallow(self, args, kwargs):
         pass
 
@@ -214,6 +246,15 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
 
     def create_object(self, data, kwargs):
         return self._data_layer.create_object(data, kwargs)
+
+    def update_list(self, data, qs, kwargs):
+        result_objs = []
+        for object_data in data:
+            obj = self._data_layer.get_object(object_data, qs=qs)
+            self._data_layer.update_object(obj, object_data['attributes'], kwargs)
+            result_objs += [obj]
+
+        return result_objs
 
 
 class ResourceDetail(with_metaclass(ResourceMeta, Resource)):
