@@ -148,7 +148,7 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         qs = QSManager(request.args, self.schema)
 
         schema_kwargs = getattr(self, 'patch_schema_kwargs', dict())
-        schema_kwargs.update({'many': True})
+        schema_kwargs.update({'partial': True})
 
         schema = compute_schema(self.schema,
                                 schema_kwargs,
@@ -158,9 +158,20 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         json_data = request.get_json() or {}
 
         self.before_patch(args, kwargs, data=json_data)
+        objs = []
+        for data in json_data['data']:
+            obj = schema.load({ 'data': data }).data
+            obj['id'] = data['id']
+            objs += [obj]
 
-        result_objs = self.update_list(json_data['data'], qs, kwargs)
-        result = schema.dump(result_objs).data
+        result_objs = self.update_list(objs, qs, kwargs)
+
+        schema_kwargs.update({'many': True})
+        many_schema = compute_schema(self.schema,
+                                schema_kwargs,
+                                qs,
+                                qs.include)
+        result = many_schema.dump(result_objs).data
 
         self.after_patch(result)
 
@@ -251,7 +262,7 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
         result_objs = []
         for object_data in data:
             obj = self._data_layer.get_object(object_data, qs=qs)
-            self._data_layer.update_object(obj, object_data['attributes'], kwargs)
+            self._data_layer.update_object(obj, object_data, kwargs)
             result_objs += [obj]
 
         return result_objs
