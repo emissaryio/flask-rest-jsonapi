@@ -84,7 +84,7 @@ def jsonapi_exception_formatter(func):
                                  headers)
         except Exception as e:
             if 'sentry' in current_app.extensions:
-                current_app.extensions['sentry'].captureException()
+                current_app.extensions['sentry'].capture_exception()
 
             exc = JsonApiException(getattr(e,
                                            'detail',
