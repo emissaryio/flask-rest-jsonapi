@@ -64,12 +64,6 @@ class SqlalchemyDataLayer(BaseDataLayer):
                 print 'Rollback failed {}'.format(e)
 
             raise e
-        except Exception as e:
-            try:
-                self.session.rollback()
-            except Exception as e:
-                print 'Rollback failed {}'.format(e)
-            raise JsonApiException("Object creation error: " + str(e), source={'pointer': '/data'})
 
         self.after_create_object(obj, data, view_kwargs)
 
@@ -169,9 +163,6 @@ class SqlalchemyDataLayer(BaseDataLayer):
         except JsonApiException as e:
             self.session.rollback()
             raise e
-        except Exception as e:
-            self.session.rollback()
-            raise JsonApiException("Update object error: " + str(e), source={'pointer': '/data'})
 
         self.after_update_object(obj, data, view_kwargs)
 
@@ -195,9 +186,6 @@ class SqlalchemyDataLayer(BaseDataLayer):
         except JsonApiException as e:
             self.session.rollback()
             raise e
-        except Exception as e:
-            self.session.rollback()
-            raise JsonApiException("Delete object error: " + str(e))
 
         self.after_delete_object(obj, view_kwargs)
 
@@ -252,9 +240,6 @@ class SqlalchemyDataLayer(BaseDataLayer):
         except JsonApiException as e:
             self.session.rollback()
             raise e
-        except Exception as e:
-            self.session.rollback()
-            raise JsonApiException("Create relationship error: " + str(e))
 
         self.after_create_relationship(obj, updated, json_data, relationship_field, related_id_field, view_kwargs)
 
@@ -351,9 +336,6 @@ class SqlalchemyDataLayer(BaseDataLayer):
         except JsonApiException as e:
             self.session.rollback()
             raise e
-        except Exception as e:
-            self.session.rollback()
-            raise JsonApiException("Update relationship error: " + str(e))
 
         self.after_update_relationship(obj, updated, json_data, relationship_field, related_id_field, view_kwargs)
 
@@ -401,9 +383,6 @@ class SqlalchemyDataLayer(BaseDataLayer):
         except JsonApiException as e:
             self.session.rollback()
             raise e
-        except Exception as e:
-            self.session.rollback()
-            raise JsonApiException("Delete relationship error: " + str(e))
 
         self.after_delete_relationship(obj, updated, json_data, relationship_field, related_id_field, view_kwargs)
 
