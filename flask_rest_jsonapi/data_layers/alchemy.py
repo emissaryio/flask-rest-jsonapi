@@ -58,10 +58,17 @@ class SqlalchemyDataLayer(BaseDataLayer):
         try:
             self.session.commit()
         except JsonApiException as e:
-            self.session.rollback()
+            try:
+                self.session.rollback()
+            except Exception as e:
+                print 'Rollback failed {}'.format(e)
+
             raise e
         except Exception as e:
-            self.session.rollback()
+            try:
+                self.session.rollback()
+            except Exception as e:
+                print 'Rollback failed {}'.format(e)
             raise JsonApiException("Object creation error: " + str(e), source={'pointer': '/data'})
 
         self.after_create_object(obj, data, view_kwargs)
