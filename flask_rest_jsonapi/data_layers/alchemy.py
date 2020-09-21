@@ -61,7 +61,7 @@ class SqlalchemyDataLayer(BaseDataLayer):
             try:
                 self.session.rollback()
             except Exception as e:
-                print 'Rollback failed {}'.format(e)
+                print('Rollback failed {}'.format(e))
 
             raise e
 
