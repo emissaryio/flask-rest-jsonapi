@@ -271,7 +271,7 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
     def create_list(self, data, kwargs):
         result_objs = []
         for object_data in data:
-            obj = self._data_layer.create_object(data, kwargs)
+            obj = self._data_layer.create_object(object_data, kwargs)
             result_objs += [obj]
 
         return result_objs
