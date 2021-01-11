@@ -190,7 +190,14 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
                                 qs.include)
 
         try:
-            data, errors = schema.load(json_data)
+            if isinstance(json_data['data'], list):
+                list_data = []
+                errors = None
+                for data in json_data['data']:
+                    data, obj_errors = schema.load({ 'data': data })
+                    list_data += [data]
+            else:
+                data, errors = schema.load(json_data)
         except IncorrectTypeError as e:
             errors = e.messages
             for error in errors['errors']:
@@ -211,15 +218,18 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
             return errors, 422
 
         self.before_post(args, kwargs, data=data)
-
-        obj = self.create_object(data, kwargs)
-
-        result = schema.dump(obj).data
-
-        if result['data'].get('links', {}).get('self'):
-            final_result = (result, 201, {'Location': result['data']['links']['self']})
-        else:
+        if isinstance(json_data['data'], list):
+            objs = self.create_list(list_data, kwargs)
+            result = schema.dump(objs).data
             final_result = (result, 201)
+        else:
+            obj = self.create_object(data, kwargs)
+            result = schema.dump(obj).data
+
+            if result['data'].get('links', {}).get('self'):
+                final_result = (result, 201, {'Location': result['data']['links']['self']})
+            else:
+                final_result = (result, 201)
 
         result = self.after_post(final_result)
 
@@ -257,6 +267,14 @@ class ResourceList(with_metaclass(ResourceMeta, Resource)):
 
     def create_object(self, data, kwargs):
         return self._data_layer.create_object(data, kwargs)
+
+    def create_list(self, data, kwargs):
+        result_objs = []
+        for object_data in data:
+            obj = self._data_layer.create_object(data, kwargs)
+            result_objs += [obj]
+
+        return result_objs
 
     def update_list(self, data, qs, kwargs):
         result_objs = []
